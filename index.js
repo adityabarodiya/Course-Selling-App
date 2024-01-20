@@ -57,7 +57,6 @@ import mongoose from "mongoose";
 import cors from "cors";
 const port = process.env.PORT || 3000;
 
-
 // const jwt = require("jsonwebtoken");
 // const mongoose = require("mongoose");
 const app = express();
