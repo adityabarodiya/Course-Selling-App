@@ -50,13 +50,19 @@ We will be covering this in the extra class next week but would be good for you 
    Description: Lists all the courses purchased by the user.
    Input: Headers: { 'Authorization': 'Bearer jwt_token_here' }
    Output: { purchasedCourses: [ { id: 1, title: 'course title', description: 'course description', price: 100, imageLink: 'https://linktoimage.com', published: true }, ... ] }
-
 */
+import express from "express";
+import jwt from "jsonwebtoken";
+import mongoose from "mongoose";
+import cors from "cors";
+const port = process.env.PORT || 3000;
 
-const express = require("express");
-const jwt = require("jsonwebtoken");
-const mongoose = require("mongoose");
+
+// const jwt = require("jsonwebtoken");
+// const mongoose = require("mongoose");
 const app = express();
+
+app.use(cors());
 
 app.use(express.json());
 
@@ -75,9 +81,8 @@ const courseSchema = new mongoose.Schema({
   title: String,
   description: String,
   price: Number,
-  imageLink: String,
-  published: Boolean,
 });
+
 // Define mongoose models
 const User = mongoose.model("User", userSchema);
 const Admin = mongoose.model("Admin", adminSchema);
@@ -105,6 +110,13 @@ const authenticateJwt = (req, res, next) => {
     res.sendStatus(401);
   }
 };
+
+app.get("/admin/me", authenticateJwt, (req, res) => {
+  res.json({
+    username: req.user.username,
+  });
+});
+
 // Admin routes
 app.post("/admin/signup", async (req, res) => {
   // logic to sign up admin
@@ -117,7 +129,7 @@ app.post("/admin/signup", async (req, res) => {
     const newAdmin = new Admin({ username, password });
     await newAdmin.save();
     const token = jwt.sign({ username, role: "admin" }, SECRET, {
-      expiresIn: "1h",
+      expiresIn: "12h",
     });
     res.json({ massage: "Admin Created succesfully", token });
   }
@@ -177,7 +189,6 @@ app.post("/users/signup", async (req, res) => {
     });
     res.json({ message: "User created successfully", token });
   }
-
 });
 
 app.post("/users/login", async (req, res) => {
@@ -223,6 +234,6 @@ app.get("/users/purchasedCourses", authenticateJwt, async (req, res) => {
   }
 });
 
-app.listen(3000, () => {
+app.listen(port, () => {
   console.log("Server is listening on port 3000");
 });
