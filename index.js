@@ -55,7 +55,6 @@ import express from "express";
 import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
 import cors from "cors";
-const port = process.env.PORT || 3000;
 
 // const jwt = require("jsonwebtoken");
 // const mongoose = require("mongoose");
@@ -74,13 +73,16 @@ const userSchema = new mongoose.Schema({
 const adminSchema = new mongoose.Schema({
   username: String,
   password: String,
+
 });
 
 const courseSchema = new mongoose.Schema({
   title: String,
   description: String,
   price: Number,
+  createdBy: String, // Add this field to store the admin's username who created the course
 });
+
 
 // Define mongoose models
 const User = mongoose.model("User", userSchema);
@@ -147,31 +149,38 @@ app.post("/admin/login", async (req, res) => {
     res.status(403).json({ massage: "Invalid username or password" });
   }
 });
-
+// Admin routes
 app.post("/admin/courses", authenticateJwt, async (req, res) => {
   // logic to create a course
-  const course = new Course(req.body);
+  const { username } = req.user;
+  const course = new Course({ ...req.body, createdBy: username });
   await course.save();
   res.json({ message: "Course created successfully", courseId: course.id });
 });
 
 app.put("/admin/courses/:courseId", authenticateJwt, async (req, res) => {
   // logic to edit a course
-  const course = await Course.findByIdAndUpdate(req.params.courseId, req.body, {
-    new: true,
-  });
+  const { username } = req.user;
+  const course = await Course.findOneAndUpdate(
+    { _id: req.params.courseId, createdBy: username },
+    req.body,
+    { new: true }
+  );
+
   if (course) {
     res.json({ message: "Course updated successfully" });
   } else {
-    res.status(404).json({ message: "Course not found" });
+    res.status(403).json({ message: "You don't have permission to update this course" });
   }
 });
 
-app.get("/admin/courses", async (req, res) => {
-  // logic to get all courses
-  const courses = await Course.find({});
+app.get("/admin/courses", authenticateJwt, async (req, res) => {
+  // logic to get all courses created by the logged-in admin
+  const { username } = req.user;
+  const courses = await Course.find({ createdBy: username });
   res.json({ courses });
 });
+
 
 // User routes
 app.post("/users/signup", async (req, res) => {
@@ -233,6 +242,6 @@ app.get("/users/purchasedCourses", authenticateJwt, async (req, res) => {
   }
 });
 
-app.listen(port, () => {
+app.listen(3000, () => {
   console.log("Server is listening on port 3000");
 });
